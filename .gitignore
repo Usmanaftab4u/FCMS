@@ -1,0 +1,25 @@
+# Node modules - never push these, too large
+node_modules/
+*/node_modules/
+
+# Environment files - NEVER push, contains passwords
+.env
+*/.env
+backend/.env
+
+# Angular build output
+frontend/fcms-app/dist/
+
+# Angular cache
+frontend/fcms-app/.angular/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+*.log
+
+# npm debug
+npm-debug.log*
