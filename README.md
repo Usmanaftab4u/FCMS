@@ -4,7 +4,7 @@
 **Student Number:** 2529243  
 **Module:** SWE6011 Agile Programming  
 **University:** University of Greater Manchester  
-**Tutor:** Renuka Nyayadhish  
+**Tutor:** Renuka Nyayadhish
 
 ## Project Overview
 
@@ -32,14 +32,17 @@ A web-based clinic appointment management system built using the Scrum Agile met
 ## How to Run This Project
 
 ### Prerequisites
+
 - Node.js v20+
 - MongoDB Community Server running locally
 - Angular CLI: `npm install -g @angular/cli`
 
 ### Step 1 - Clone the repository
+
 git clone https://github.com/Usmanaftab4u/FCMS.git cd FCMS
 
 ### Step 2 - Set up the backend
+
 cd backend
 npm install
 
@@ -54,17 +57,21 @@ EMAIL_PASS=your_gmail_app_password
 EMAIL_FROM=FCMS Clinic your_gmail@gmail.com
 
 ### Step 3 - Seed the database with test doctors
+
 node seed.js
 
 ### Step 4 - Create admin account
+
 node createAdmin.js
 
 ### Step 5 - Start the backend server
+
 node server.js
 
 Server runs on: http://localhost:5000
 
 ### Step 6 - Set up the frontend (new terminal)
+
 cd frontend/fcms-app
 npm install
 ng serve
@@ -73,19 +80,20 @@ App runs on: http://localhost:4200
 
 ## Test Accounts
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@fcms.com | admin123 |
+| Role    | Email                 | Password    |
+| ------- | --------------------- | ----------- |
+| Admin   | admin@fcms.com        | admin123    |
 | Patient | Register at /register | your choice |
 
 ## JIRA Project
+
 Project: FCMS  
 Board: https://usmana9.atlassian.net/jira/software/projects/FCMS/boards
 
 ## Sprint Summary
 
-| Sprint | Duration | Items | Status |
-|--------|----------|-------|--------|
-| Sprint 0 | 2 Mar - 16 Mar 2026 | FCMS-1 to FCMS-4 | Done |
-| Sprint 1 | 16 Mar - 6 Apr 2026 | FCMS-5 to FCMS-8 | Done |
-| Sprint 2 | 6 Apr - 20 Apr 2026 | FCMS-9 to FCMS-11 | Done |
+| Sprint   | Duration            | Items             | Status |
+| -------- | ------------------- | ----------------- | ------ |
+| Sprint 0 | 2 Mar - 16 Mar 2026 | FCMS-1 to FCMS-4  | Done   |
+| Sprint 1 | 16 Mar - 6 Apr 2026 | FCMS-5 to FCMS-8  | Done   |
+| Sprint 2 | 6 Apr - 20 Apr 2026 | FCMS-9 to FCMS-11 | Done   |
