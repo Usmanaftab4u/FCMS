@@ -7,18 +7,18 @@ import { Router } from '@angular/router';
 export class AuthService {
   constructor(private router: Router) {}
 
-  saveUser(token: string, patient: any): void {
+  saveUser(token: string, user: any): void {
     localStorage.setItem('token', token);
-    localStorage.setItem('patient', JSON.stringify(patient));
+    localStorage.setItem('user', JSON.stringify(user));
   }
 
   getToken(): string | null {
     return localStorage.getItem('token');
   }
 
-  getPatient(): any {
-    const patient = localStorage.getItem('patient');
-    return patient ? JSON.parse(patient) : null;
+  getUser(): any {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
   }
 
   isLoggedIn(): boolean {
@@ -26,13 +26,24 @@ export class AuthService {
   }
 
   isAdmin(): boolean {
-    const patient = this.getPatient();
-    return patient?.role === 'admin';
+    return this.getUser()?.role === 'admin';
+  }
+
+  isDoctor(): boolean {
+    return this.getUser()?.role === 'doctor';
+  }
+
+  isPatient(): boolean {
+    return this.getUser()?.role === 'patient';
+  }
+
+  getUserRole(): string {
+    return this.getUser()?.role || '';
   }
 
   logout(): void {
     localStorage.removeItem('token');
-    localStorage.removeItem('patient');
+    localStorage.removeItem('user');
     this.router.navigate(['/login']);
   }
 }

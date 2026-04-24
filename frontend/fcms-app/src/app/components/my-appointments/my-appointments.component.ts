@@ -53,6 +53,10 @@ import { AuthService } from '../../services/auth.service';
               <span class="detail-icon">🕐</span>
               <span>{{ appt.time }}</span>
             </div>
+            <div class="detail-row" *ngIf="appt.cancelledBy">
+              <span class="detail-icon">ℹ️</span>
+              <span>Cancelled by: {{ appt.cancelledBy | titlecase }}</span>
+            </div>
           </div>
 
           <div class="appt-footer" *ngIf="appt.status === 'confirmed'">
@@ -128,7 +132,7 @@ import { AuthService } from '../../services/auth.service';
       }
       .appointment-card.cancelled {
         border-left-color: #ef5350;
-        opacity: 0.7;
+        opacity: 0.75;
       }
       .appointment-card.completed {
         border-left-color: #66bb6a;
@@ -173,6 +177,7 @@ import { AuthService } from '../../services/auth.service';
         align-items: center;
         gap: 10px;
         color: #555;
+        font-size: 14px;
       }
       .detail-icon {
         font-size: 16px;
@@ -213,8 +218,8 @@ export class MyAppointmentsComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const patient = this.auth.getPatient();
-    if (!patient) {
+    const user = this.auth.getUser();
+    if (!user) {
       this.router.navigate(['/login']);
       return;
     }
@@ -222,8 +227,8 @@ export class MyAppointmentsComponent implements OnInit {
   }
 
   loadAppointments() {
-    const patient = this.auth.getPatient();
-    this.api.getPatientAppointments(patient.id).subscribe({
+    const user = this.auth.getUser();
+    this.api.getPatientAppointments(user.id).subscribe({
       next: (res: any) => {
         this.appointments = res.data;
         this.loading = false;
@@ -236,7 +241,7 @@ export class MyAppointmentsComponent implements OnInit {
 
   cancelAppointment(id: string) {
     this.cancelling = id;
-    this.api.cancelAppointment(id).subscribe({
+    this.api.cancelAppointment(id, 'patient').subscribe({
       next: () => {
         this.cancelling = '';
         this.loadAppointments();
@@ -249,8 +254,7 @@ export class MyAppointmentsComponent implements OnInit {
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-GB', {
+    return new Date(dateStr).toLocaleDateString('en-GB', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

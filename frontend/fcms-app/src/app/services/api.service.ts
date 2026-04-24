@@ -18,6 +18,15 @@ export class ApiService {
     });
   }
 
+  // ── AUTH ─────────────────────────────────────────────
+  register(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/auth/register`, data);
+  }
+
+  login(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/auth/login`, data);
+  }
+
   // ── DOCTORS ──────────────────────────────────────────
   getDoctors(): Observable<any> {
     return this.http.get(`${this.baseUrl}/doctors`);
@@ -25,6 +34,12 @@ export class ApiService {
 
   getDoctorById(id: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/doctors/${id}`);
+  }
+
+  getDoctorByUserId(userId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/doctors/by-user/${userId}`, {
+      headers: this.getHeaders(),
+    });
   }
 
   createDoctor(data: any): Observable<any> {
@@ -41,6 +56,14 @@ export class ApiService {
     );
   }
 
+  addSingleSlot(doctorId: string, date: string, time: string): Observable<any> {
+    return this.http.post(
+      `${this.baseUrl}/doctors/${doctorId}/slots`,
+      { date, time },
+      { headers: this.getHeaders() },
+    );
+  }
+
   deleteSlot(doctorId: string, slotId: string): Observable<any> {
     return this.http.delete(
       `${this.baseUrl}/doctors/${doctorId}/slots/${slotId}`,
@@ -51,9 +74,10 @@ export class ApiService {
   // ── APPOINTMENTS ─────────────────────────────────────
   getAllAppointments(filters?: any): Observable<any> {
     let url = `${this.baseUrl}/appointments`;
-    if (filters?.date) url += `?date=${filters.date}`;
-    if (filters?.doctorId)
-      url += `${filters.date ? '&' : '?'}doctorId=${filters.doctorId}`;
+    const params = [];
+    if (filters?.date) params.push(`date=${filters.date}`);
+    if (filters?.doctorId) params.push(`doctorId=${filters.doctorId}`);
+    if (params.length > 0) url += '?' + params.join('&');
     return this.http.get(url, { headers: this.getHeaders() });
   }
 
@@ -63,26 +87,36 @@ export class ApiService {
     });
   }
 
+  getDoctorAppointments(doctorProfileId: string): Observable<any> {
+    return this.http.get(
+      `${this.baseUrl}/appointments/doctor/${doctorProfileId}`,
+      { headers: this.getHeaders() },
+    );
+  }
+
   bookAppointment(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/appointments`, data, {
       headers: this.getHeaders(),
     });
   }
 
-  cancelAppointment(id: string): Observable<any> {
+  cancelAppointment(id: string, cancelledBy: string): Observable<any> {
     return this.http.put(
       `${this.baseUrl}/appointments/${id}/cancel`,
-      {},
+      { cancelledBy },
       { headers: this.getHeaders() },
     );
   }
 
-  // ── AUTH ─────────────────────────────────────────────
-  register(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/auth/register`, data);
-  }
-
-  login(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/auth/login`, data);
+  rescheduleAppointment(
+    id: string,
+    newDate: string,
+    newTime: string,
+  ): Observable<any> {
+    return this.http.put(
+      `${this.baseUrl}/appointments/${id}/reschedule`,
+      { newDate, newTime },
+      { headers: this.getHeaders() },
+    );
   }
 }

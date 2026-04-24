@@ -1,19 +1,19 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const dotenv = require("dotenv");
-const Patient = require("./models/Patient");
+const User = require("./models/Patient");
 
 dotenv.config();
 
 async function createAdmin() {
   await mongoose.connect(process.env.MONGODB_URI);
+  console.log("Connected to MongoDB");
 
-  // Delete existing admin if any
-  await Patient.deleteOne({ email: "admin@fcms.com" });
+  await User.deleteOne({ email: "admin@fcms.com" });
 
   const hashedPassword = await bcrypt.hash("admin123", 10);
 
-  const admin = new Patient({
+  const admin = new User({
     name: "Admin",
     email: "admin@fcms.com",
     phone: "03000000000",
@@ -28,4 +28,7 @@ async function createAdmin() {
   process.exit(0);
 }
 
-createAdmin().catch(console.error);
+createAdmin().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

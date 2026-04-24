@@ -2,10 +2,10 @@ const express = require("express");
 const router = express.Router();
 const Appointment = require("../models/Appointment");
 const Doctor = require("../models/Doctor");
-const Patient = require("../models/Patient");
+const User = require("../models/Patient");
 const { sendConfirmation } = require("../services/emailService");
 
-// GET all appointments (admin dashboard)
+// GET all appointments (admin)
 router.get("/", async (req, res) => {
   try {
     const { date, doctorId } = req.query;
@@ -15,7 +15,10 @@ router.get("/", async (req, res) => {
 
     const appointments = await Appointment.find(filter)
       .populate("patient", "name email phone")
-      .populate("doctor", "name specialization")
+      .populate({
+        path: "doctor",
+        populate: { path: "user", select: "name email" },
+      })
       .sort({ date: 1, time: 1 });
 
     res.json({ success: true, data: appointments });
@@ -30,20 +33,37 @@ router.get("/patient/:patientId", async (req, res) => {
     const appointments = await Appointment.find({
       patient: req.params.patientId,
     })
-      .populate("doctor", "name specialization")
+      .populate("doctor", "name specialization email phone")
       .sort({ date: 1 });
+
     res.json({ success: true, data: appointments });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// POST book a new appointment (with double booking prevention)
+// GET appointments for a specific doctor
+router.get("/doctor/:doctorProfileId", async (req, res) => {
+  try {
+    const appointments = await Appointment.find({
+      doctor: req.params.doctorProfileId,
+    })
+      .populate("patient", "name email phone")
+      .populate("doctor", "name specialization")
+      .sort({ date: 1, time: 1 });
+
+    res.json({ success: true, data: appointments });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST book a new appointment
 router.post("/", async (req, res) => {
   try {
     const { patientId, doctorId, date, time } = req.body;
 
-    // Check for double booking - same doctor same slot
+    // Check doctor conflict
     const doctorConflict = await Appointment.findOne({
       doctor: doctorId,
       date: date,
@@ -59,7 +79,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Check if patient already has appointment at same date and time
+    // Check patient conflict
     const patientConflict = await Appointment.findOne({
       patient: patientId,
       date: date,
@@ -74,7 +94,6 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Check doctor exists
     const doctor = await Doctor.findById(doctorId);
     if (!doctor) {
       return res.status(404).json({
@@ -83,7 +102,6 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Create the appointment
     const appointment = new Appointment({
       patient: patientId,
       doctor: doctorId,
@@ -94,7 +112,7 @@ router.post("/", async (req, res) => {
 
     await appointment.save();
 
-    // Mark slot as unavailable in doctor model
+    // Mark slot as unavailable
     const slotIndex = doctor.availableSlots.findIndex(
       (slot) => slot.date === date && slot.time === time,
     );
@@ -103,12 +121,11 @@ router.post("/", async (req, res) => {
       await doctor.save();
     }
 
-    // Populate the response
     const populatedAppointment = await Appointment.findById(appointment._id)
       .populate("patient", "name email phone")
-      .populate("doctor", "name specialization");
+      .populate("doctor", "name specialization email phone");
 
-    // Send confirmation email (don't await — don't block the response)
+    // Send confirmation email
     sendConfirmation(
       populatedAppointment.patient.email,
       populatedAppointment.patient.name,
@@ -134,20 +151,35 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT cancel an appointment
+// PUT cancel appointment - patient, doctor or admin can cancel
 router.put("/:id/cancel", async (req, res) => {
   try {
-    const appointment = await Appointment.findById(req.params.id);
+    const { cancelledBy } = req.body;
+
+    const appointment = await Appointment.findById(req.params.id).populate(
+      "doctor",
+    );
+
     if (!appointment) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Appointment not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
     }
+
+    if (appointment.status === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Appointment is already cancelled",
+      });
+    }
+
     appointment.status = "cancelled";
+    appointment.cancelledBy = cancelledBy || "admin";
     await appointment.save();
 
     // Make slot available again
-    const doctor = await Doctor.findById(appointment.doctor);
+    const doctor = await Doctor.findById(appointment.doctor._id);
     if (doctor) {
       const slotIndex = doctor.availableSlots.findIndex(
         (slot) =>
@@ -161,7 +193,71 @@ router.put("/:id/cancel", async (req, res) => {
 
     res.json({
       success: true,
-      message: "Appointment cancelled",
+      message: "Appointment cancelled successfully",
+      data: appointment,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// PUT doctor changes slot time for a specific appointment
+router.put("/:id/reschedule", async (req, res) => {
+  try {
+    const { newDate, newTime, doctorProfileId } = req.body;
+
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    // Check new slot is not already booked
+    const conflict = await Appointment.findOne({
+      doctor: appointment.doctor,
+      date: newDate,
+      time: newTime,
+      status: "confirmed",
+      _id: { $ne: appointment._id },
+    });
+
+    if (conflict) {
+      return res.status(409).json({
+        success: false,
+        message: "The new time slot is already booked",
+      });
+    }
+
+    const doctor = await Doctor.findById(appointment.doctor);
+    if (doctor) {
+      // Free old slot
+      const oldSlot = doctor.availableSlots.findIndex(
+        (s) => s.date === appointment.date && s.time === appointment.time,
+      );
+      if (oldSlot !== -1) {
+        doctor.availableSlots[oldSlot].isAvailable = true;
+      }
+
+      // Book new slot
+      const newSlot = doctor.availableSlots.findIndex(
+        (s) => s.date === newDate && s.time === newTime,
+      );
+      if (newSlot !== -1) {
+        doctor.availableSlots[newSlot].isAvailable = false;
+      }
+
+      await doctor.save();
+    }
+
+    appointment.date = newDate;
+    appointment.time = newTime;
+    await appointment.save();
+
+    res.json({
+      success: true,
+      message: "Appointment rescheduled successfully",
       data: appointment,
     });
   } catch (error) {

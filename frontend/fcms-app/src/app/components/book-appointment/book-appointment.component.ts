@@ -13,15 +13,17 @@ import { AuthService } from '../../services/auth.service';
     <div class="page-container">
       <h2>Book an Appointment</h2>
 
-      <!-- Not logged in -->
       <div class="alert-info" *ngIf="!auth.isLoggedIn()">
-        Please <a (click)="goToLogin()">login</a> to book an appointment.
+        Please <span (click)="goToLogin()" class="link">login</span>
+        to book an appointment.
       </div>
 
-      <!-- Loading -->
+      <div class="alert-info" *ngIf="auth.isLoggedIn() && !auth.isPatient()">
+        Only patients can book appointments.
+      </div>
+
       <div class="loading" *ngIf="loading">Loading doctors...</div>
 
-      <!-- Success Message -->
       <div class="success-banner" *ngIf="successMessage">
         <span>✅</span>
         <div>
@@ -30,10 +32,9 @@ import { AuthService } from '../../services/auth.service';
         </div>
       </div>
 
-      <!-- Error Message -->
       <div class="error-banner" *ngIf="errorMessage">❌ {{ errorMessage }}</div>
 
-      <div *ngIf="auth.isLoggedIn() && !loading">
+      <div *ngIf="auth.isLoggedIn() && auth.isPatient() && !loading">
         <!-- Step 1: Select Doctor -->
         <div class="step-card">
           <div class="step-header">
@@ -81,6 +82,9 @@ import { AuthService } from '../../services/auth.service';
               {{ formatDate(date) }}
             </div>
           </div>
+          <div class="empty" *ngIf="getAvailableDates().length === 0">
+            No available dates for this doctor.
+          </div>
         </div>
 
         <!-- Step 3: Select Time -->
@@ -98,7 +102,9 @@ import { AuthService } from '../../services/auth.service';
               (click)="slot.isAvailable && selectTime(slot.time)"
             >
               {{ slot.time }}
-              <span *ngIf="!slot.isAvailable" class="booked-label">Booked</span>
+              <span *ngIf="!slot.isAvailable" class="booked-label">
+                Booked
+              </span>
             </div>
           </div>
         </div>
@@ -128,7 +134,7 @@ import { AuthService } from '../../services/auth.service';
             </div>
             <div class="summary-row">
               <span class="label">Patient</span>
-              <span class="value">{{ auth.getPatient()?.name }}</span>
+              <span class="value">{{ auth.getUser()?.name }}</span>
             </div>
           </div>
           <button
@@ -159,14 +165,20 @@ import { AuthService } from '../../services/auth.service';
         color: #666;
         font-size: 18px;
       }
+      .empty {
+        color: #999;
+        font-style: italic;
+        padding: 12px 0;
+      }
       .alert-info {
         background: #e3f2fd;
         padding: 16px;
         border-radius: 8px;
         color: #1565c0;
         font-size: 16px;
+        margin-bottom: 16px;
       }
-      .alert-info a {
+      .link {
         color: #1976d2;
         cursor: pointer;
         font-weight: bold;
@@ -405,7 +417,7 @@ export class BookAppointmentComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    if (!this.auth.isLoggedIn()) {
+    if (!this.auth.isLoggedIn() || !this.auth.isPatient()) {
       this.loading = false;
       return;
     }
@@ -420,7 +432,7 @@ export class BookAppointmentComponent implements OnInit {
         this.loading = false;
       },
       error: () => {
-        this.errorMessage = 'Failed to load doctors. Please refresh the page.';
+        this.errorMessage = 'Failed to load doctors. Please refresh.';
         this.loading = false;
       },
     });
@@ -464,8 +476,7 @@ export class BookAppointmentComponent implements OnInit {
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-GB', {
+    return new Date(dateStr).toLocaleDateString('en-GB', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -478,8 +489,8 @@ export class BookAppointmentComponent implements OnInit {
   }
 
   bookAppointment() {
-    const patient = this.auth.getPatient();
-    if (!patient) {
+    const user = this.auth.getUser();
+    if (!user) {
       this.router.navigate(['/login']);
       return;
     }
@@ -489,7 +500,7 @@ export class BookAppointmentComponent implements OnInit {
 
     this.api
       .bookAppointment({
-        patientId: patient.id,
+        patientId: user.id,
         doctorId: this.selectedDoctor._id,
         date: this.selectedDate,
         time: this.selectedTime,
@@ -499,7 +510,7 @@ export class BookAppointmentComponent implements OnInit {
           this.booking = false;
           this.successMessage = `Your appointment with ${this.selectedDoctor.name} on
           ${this.formatDate(this.selectedDate)} at ${this.selectedTime}
-          has been confirmed.`;
+          has been confirmed. A confirmation email has been sent.`;
           this.selectedDoctor = null;
           this.selectedDate = '';
           this.selectedTime = '';

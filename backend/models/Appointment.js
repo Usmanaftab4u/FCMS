@@ -4,7 +4,7 @@ const appointmentSchema = new mongoose.Schema(
   {
     patient: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Patient",
+      ref: "User",
       required: true,
     },
     doctor: {
@@ -19,6 +19,11 @@ const appointmentSchema = new mongoose.Schema(
       enum: ["confirmed", "cancelled", "completed"],
       default: "confirmed",
     },
+    cancelledBy: {
+      type: String,
+      enum: ["patient", "doctor", "admin", null],
+      default: null,
+    },
     reminderSent: { type: Boolean, default: false },
     confirmationSent: { type: Boolean, default: false },
     notes: { type: String },
@@ -26,8 +31,6 @@ const appointmentSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// This index prevents double booking
-// Same doctor cannot have two appointments at same date and time
 appointmentSchema.index({ doctor: 1, date: 1, time: 1 }, { unique: true });
 
 module.exports = mongoose.model("Appointment", appointmentSchema);

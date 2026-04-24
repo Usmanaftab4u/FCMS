@@ -8,11 +8,14 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="form-container">
       <div class="form-card">
-        <h2>Login to Your Account</h2>
+        <div class="login-icon">🏥</div>
+        <h2>Login to FCMS</h2>
+        <p class="subtitle">Family Clinic Management System</p>
+
         <div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
         <div class="success" *ngIf="successMessage">{{ successMessage }}</div>
 
@@ -22,6 +25,7 @@ import { AuthService } from '../../services/auth.service';
             type="email"
             [(ngModel)]="email"
             placeholder="Enter your email"
+            (keyup.enter)="login()"
           />
         </div>
 
@@ -31,6 +35,7 @@ import { AuthService } from '../../services/auth.service';
             type="password"
             [(ngModel)]="password"
             placeholder="Enter your password"
+            (keyup.enter)="login()"
           />
         </div>
 
@@ -39,12 +44,18 @@ import { AuthService } from '../../services/auth.service';
         </button>
 
         <p class="form-footer">
-          Don't have an account? <a routerLink="/register">Register here</a>
+          Don't have an account?
+          <a routerLink="/register">Register here</a>
         </p>
 
-        <div class="admin-hint">
-          <strong>Admin access:</strong> email: admin&#64;fcms.com | password:
-          admin123
+        <div class="test-accounts">
+          <p class="test-title">Test Accounts</p>
+          <div class="test-row" (click)="fillAdmin()">
+            ⚙️ Admin: admin&#64;fcms.com / admin123
+          </div>
+          <div class="test-row" (click)="fillDoctor()">
+            👨‍⚕️ Doctor: ahmed.khan&#64;fcms.com / doctor123
+          </div>
         </div>
       </div>
     </div>
@@ -63,20 +74,32 @@ import { AuthService } from '../../services/auth.service';
         width: 100%;
         max-width: 420px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      .login-icon {
+        font-size: 48px;
+        margin-bottom: 8px;
       }
       h2 {
         color: #1976d2;
-        margin-bottom: 24px;
-        text-align: center;
+        margin-bottom: 4px;
+        font-size: 24px;
+      }
+      .subtitle {
+        color: #888;
+        font-size: 14px;
+        margin-bottom: 28px;
       }
       .form-group {
-        margin-bottom: 20px;
+        margin-bottom: 18px;
+        text-align: left;
       }
       label {
         display: block;
         margin-bottom: 6px;
         color: #555;
         font-weight: 500;
+        font-size: 14px;
       }
       input {
         width: 100%;
@@ -85,7 +108,6 @@ import { AuthService } from '../../services/auth.service';
         border-radius: 6px;
         font-size: 15px;
         box-sizing: border-box;
-        transition: border 0.2s;
       }
       input:focus {
         border-color: #1976d2;
@@ -116,6 +138,7 @@ import { AuthService } from '../../services/auth.service';
         border-radius: 6px;
         margin-bottom: 16px;
         font-size: 14px;
+        text-align: left;
       }
       .success {
         background: #e8f5e9;
@@ -129,17 +152,37 @@ import { AuthService } from '../../services/auth.service';
         text-align: center;
         margin-top: 16px;
         color: #666;
+        font-size: 14px;
       }
       .form-footer a {
         color: #1976d2;
       }
-      .admin-hint {
-        margin-top: 20px;
-        padding: 10px;
-        background: #fff3e0;
-        border-radius: 6px;
-        font-size: 13px;
-        color: #e65100;
+      .test-accounts {
+        margin-top: 24px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 14px;
+        text-align: left;
+      }
+      .test-title {
+        font-size: 12px;
+        color: #888;
+        font-weight: 600;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+      .test-row {
+        font-size: 12px;
+        color: #555;
+        padding: 6px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 4px;
+        transition: background 0.15s;
+      }
+      .test-row:hover {
+        background: #e3f2fd;
+        color: #1976d2;
       }
     `,
   ],
@@ -157,6 +200,16 @@ export class LoginComponent {
     private router: Router,
   ) {}
 
+  fillAdmin() {
+    this.email = 'admin@fcms.com';
+    this.password = 'admin123';
+  }
+
+  fillDoctor() {
+    this.email = 'ahmed.khan@fcms.com';
+    this.password = 'doctor123';
+  }
+
   login() {
     if (!this.email || !this.password) {
       this.errorMessage = 'Please enter your email and password';
@@ -167,17 +220,17 @@ export class LoginComponent {
 
     this.api.login({ email: this.email, password: this.password }).subscribe({
       next: (res: any) => {
-        this.auth.saveUser(res.token, res.patient);
+        this.auth.saveUser(res.token, res.user);
         this.successMessage = 'Login successful! Redirecting...';
         setTimeout(() => {
-          if (res.patient.role === 'admin') {
-            this.router.navigate(['/admin']);
-          } else {
-            this.router.navigate(['/book']);
-          }
-        }, 1000);
+          const role = res.user.role;
+          if (role === 'admin') this.router.navigate(['/admin']);
+          else if (role === 'doctor')
+            this.router.navigate(['/doctor-dashboard']);
+          else this.router.navigate(['/book']);
+        }, 800);
       },
-      error: (err) => {
+      error: (err: any) => {
         this.loading = false;
         this.errorMessage =
           err.error?.message || 'Login failed. Please try again.';
